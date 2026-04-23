@@ -976,5 +976,5 @@ text_sensor:
       sorting_group_id: oq_diagnostics    
 
   - platform: template
-    name: "Software Version Details"
+    name: "PCB program version"
     id: version_display

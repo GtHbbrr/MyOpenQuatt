@@ -175,7 +175,7 @@ interval:
             // Only stop if:
             // - We are in Standby
             // - The relay is ON
-            // - AND the pump is at our low speed (level >= 770)
+            // - AND the pump is at the low antifreeze speed below 500L/h (level >= 760)
             // This prevents killing the pump during the 'Heating' startup priming.
             if (is_standby && id(modbus_pump_relay).state == true && id(modbus_pump_level).state >= 760) {
             

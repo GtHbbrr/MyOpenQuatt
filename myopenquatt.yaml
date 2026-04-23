@@ -1,0 +1,980 @@
+substitutions:
+  device_name: heatpump-listener
+  friendly_name: Heat Pump Listener - Quatt
+  time_timezone: "Europe/Amsterdam"
+  throttling_value: 10s
+  version: quatt-single-2relay
+
+esphome:
+  name: heatpump-openquatt
+  friendly_name: MyOpenQuatt
+  min_version: 2025.12.0
+  project:
+    name: "teslanerd.heatpump-openquatt"
+    version: "0.1.3"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
+      sram1_as_iram: true 
+    sdkconfig_options:
+      COMPILER_OPTIMIZATION_SIZE: y
+      CONFIG_BT_ENABLED: n         
+
+switch:
+  - platform: gpio
+    pin: GPIO22
+    name: Relay 1
+    restore_mode: RESTORE_DEFAULT_OFF
+    web_server:
+      sorting_group_id: openquatt_control
+  - platform: gpio
+    pin: GPIO23
+    name: Relay 2
+    restore_mode: RESTORE_DEFAULT_OFF
+    web_server:
+      sorting_group_id: openquatt_control
+  - platform: modbus_controller
+    name: "Low noise mode"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2006
+    bitmask: 1
+    web_server:
+      sorting_group_id: heatpump_control
+  - platform: modbus_controller
+    name: "Pump relay"
+    id: modbus_pump_relay
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2010
+    bitmask: 4096
+    web_server:
+      sorting_group_id: heatpump_control         
+
+logger:
+  level: WARN
+  baud_rate: 0
+  logs:
+    # This specifically silences the state changes [S] for these types
+    sensor: NONE
+    number: NONE
+    select: NONE
+    switch: NONE
+    binary_sensor: NONE
+    modbus_controller: WARN  # Keeps the important Modbus errors visible
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+web_server:
+  id: webserver_component
+  port: 80
+  version: 3
+  sorting_groups:
+    - id: heatpump_control
+      name: "Heatpump Control"
+      sorting_weight: -20
+    - id: heatpump_alarms
+      name: "Alarms"
+      sorting_weight: -10      
+    - id: openquatt_control
+      name: "OpenQuatt Control"
+      sorting_weight: 20
+    - id: heatpump_settings
+      name: "EEPROM Settings"
+      sorting_weight: 40
+    - id: oq_diagnostics
+      name: "Diagnostics"
+      sorting_weight: 50
+
+uart:
+  id: uart_component
+  rx_pin: GPIO32
+  tx_pin: GPIO33
+  parity: EVEN
+  data_bits: 8
+  stop_bits: 1
+  baud_rate: 19200
+  rx_full_threshold: 1
+  rx_timeout: 1
+  rx_buffer_size: 512
+
+modbus:
+  flow_control_pin: GPIO21
+  send_wait_time: 100ms 
+
+modbus_controller:
+  - id: modbus_hp1
+    address: 0x01 
+    update_interval: 5s
+    command_throttle: 300ms
+    max_cmd_retries: 1
+    offline_skip_updates: 5
+    setup_priority: -10    
+
+output:
+  - platform: gpio
+    id: led_yellow_output
+    pin: GPIO18
+
+light:
+  - platform: binary
+    id: led_yellow
+    output: led_yellow_output
+  - platform: status_led
+    id: led_red
+    pin:
+      number: GPIO19
+
+globals:
+  - id: sensor_fail_count
+    type: int
+    initial_value: '0'
+
+interval:
+  - interval: 30s
+    then:
+      - lambda: |-
+          float temp = id(outside_temp_sensor).state;
+          bool sensor_bad = std::isnan(temp);
+          
+          bool is_standby = false;
+          if (id(working_mode).active_index().has_value()) {
+            is_standby = (id(working_mode).active_index().value() == 0);
+          }
+
+          if (sensor_bad) { id(sensor_fail_count)++; } 
+          else { id(sensor_fail_count) = 0; }
+
+          // 1. TRIGGER: Below 7°C OR sensor dead for 5 mins
+          if ((!sensor_bad && temp < 7.0) || id(sensor_fail_count) >= 10) {
+            // Only trigger if in Standby
+            if (is_standby) {
+              
+              auto call = id(modbus_pump_level).make_call();
+              call.set_value(770);
+              call.perform();
+              
+              id(modbus_pump_relay).turn_on();
+              ESP_LOGW("antifreeze", "Cold/Error: Protection started.");
+            }
+          } 
+          
+          // 2. RELEASE: Above 9°C AND in Standby
+          else if (!sensor_bad && temp > 9.0) {
+            // Only stop if:
+            // - We are in Standby
+            // - The relay is ON
+            // - AND the pump is at our low speed (level >= 770)
+            // This prevents killing the pump during the 'Heating' startup priming.
+            if (is_standby && id(modbus_pump_relay).state == true && id(modbus_pump_level).state >= 760) {
+            
+              id(modbus_pump_relay).turn_off();
+              ESP_LOGW("antifreeze", "Warm & Standby: Pump stopped safely.");
+            }
+          }
+
+button:
+  - platform: restart
+    name: Restart OpenQuatt
+    web_server:
+      sorting_group_id: openquatt_control
+  - platform: factory_reset
+    id: button_factory_reset
+  - platform: template
+    name: "Restore Teslanerd Defaults"
+    id: reset_to_defaults
+    icon: "mdi:factory"
+    web_server:
+      sorting_group_id: heatpump_settings
+    on_press:
+      then:
+        - logger.log: "Restoring default Teslanerd parameters..."
+        
+        # Restore DC Fan Defaults
+        - number.set:
+            id: r3304 #DC Fan high speed power
+            value: 65    
+        - number.set:
+            id: r3305 #DC Fan medium speed power
+            value: 68    
+        - number.set:
+            id: r3306 #DC Fan low speed power
+            value: 70    
+
+        # Restore HeatingHz F-Registers (Examples)
+        - number.set:
+            id: r3011 #HeatingHz level00
+            value: 0    
+        - number.set:
+            id: r3012 #HeatingHz level01
+            value: 30    
+        - number.set:
+            id: r3013 #HeatingHz level02
+            value: 39    
+        - number.set:
+            id: r3014 #HeatingHz level03
+            value: 49    
+        - number.set:
+            id: r3015 #HeatingHz level04
+            value: 55   
+        - number.set:
+            id: r3016 #HeatingHz level05
+            value: 61   
+        - number.set:
+            id: r3017 #HeatingHz level06
+            value: 67   
+        - number.set:
+            id: r3018 #HeatingHz level07
+            value: 72   
+        - number.set:
+            id: r3019 #HeatingHz level08
+            value: 79   
+        - number.set:
+            id: r3020 #HeatingHz level09
+            value: 85   
+        - number.set:
+            id: r3021 #HeatingHz level10
+            value: 90   
+
+
+        - logger.log: "All parameters restored to preset defaults."    
+
+  - platform: template
+    id: oq_debug_modbus_read_hp1
+    name: "Debug Read HP1 register"
+    icon: mdi:database-search
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics
+    on_press:
+      - lambda: |-
+          // Read the target register and build a one-shot Modbus read command.
+          using namespace esphome::modbus_controller;
+          const uint16_t reg = (uint16_t) lroundf(id(oq_debug_modbus_register).state);
+          auto cmd = ModbusCommandItem::create_read_command(
+              id(modbus_hp1), ModbusRegisterType::HOLDING, reg, 1,
+              [reg](ModbusRegisterType, uint16_t, const std::vector<uint8_t> &data) {
+                // Decode the response and publish the raw/u16/s16 views.
+                if (data.size() < 2) {
+                  id(oq_debug_modbus_last_target).publish_state("HP1 reg " + std::to_string(reg));
+                  id(oq_debug_modbus_last_raw).publish_state("ERR: short response");
+                  return;
+                }
+                const uint16_t u16 = (uint16_t(data[0]) << 8) | uint16_t(data[1]);
+                const int16_t s16 = (int16_t) u16;
+                char raw[20];
+                snprintf(raw, sizeof(raw), "0x%02X 0x%02X", data[0], data[1]);
+                id(oq_debug_modbus_u16).publish_state((float) u16);
+                id(oq_debug_modbus_s16).publish_state((float) s16);
+                id(oq_debug_modbus_last_target).publish_state("HP1 reg " + std::to_string(reg));
+                id(oq_debug_modbus_last_raw).publish_state(raw);
+              });
+          // Queue the command after the callback is fully configured.
+          id(modbus_hp1)->queue_command(cmd);        
+
+sensor:
+  - platform: modbus_controller
+    name: "AC Voltage"
+    device_class: "voltage"
+    accuracy_decimals: 0
+    state_class: "measurement"
+    unit_of_measurement: "V"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2100
+    value_type: S_WORD
+  - platform: modbus_controller
+    name: "AC Current"
+    device_class: "current"
+    accuracy_decimals: 1
+    state_class: "measurement"
+    unit_of_measurement: "A"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2101
+    value_type: S_WORD
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    name: "Compressor working speed demand"
+    device_class: "frequency"
+    accuracy_decimals: 0
+    state_class: "measurement"
+    unit_of_measurement: "Hz"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2102
+    value_type: S_WORD
+  - platform: modbus_controller
+    name: "Compressor working speed actual"
+    device_class: "frequency"
+    accuracy_decimals: 0
+    state_class: "measurement"
+    unit_of_measurement: "Hz"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2103
+    value_type: S_WORD
+  - platform: modbus_controller
+    name: "Fan speed maximum"
+    accuracy_decimals: 0
+    state_class: "measurement"
+    unit_of_measurement: "rpm"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2104
+    value_type: S_WORD
+  - platform: modbus_controller
+    name: "Fan speed actual"
+    accuracy_decimals: 0
+    state_class: "measurement"
+    unit_of_measurement: "rpm"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2105
+    value_type: S_WORD
+    register_count: 2
+  - platform: modbus_controller
+    name: "Electric expansion valve"
+    state_class: "measurement"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2107
+    value_type: S_WORD
+    register_count: 3
+  - platform: modbus_controller
+    name: "Outside temperature"
+    id: outside_temp_sensor
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2110
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Evaporator coil temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2111
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Discharge temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2112
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Suction temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2113
+    value_type: S_WORD
+    register_count: 3
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Evaporator pressure"
+    device_class: "pressure"
+    accuracy_decimals: 1
+    state_class: "measurement"
+    unit_of_measurement: "bar"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2116
+    value_type: S_WORD
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    name: "Condensor pressure"
+    device_class: "pressure"
+    accuracy_decimals: 1
+    state_class: "measurement"
+    unit_of_measurement: "bar"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2117
+    value_type: S_WORD
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    name: "Failure state 1"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    value_type: S_WORD
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Failure state 2"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2120
+    value_type: S_WORD
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Failure state 3"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2121
+    value_type: S_WORD
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    modbus_controller_id: modbus_hp1
+    id: raw_version_reg    
+    address: 2122
+    register_type: holding
+    internal: true # Hides it from Home Assistant
+    on_value:
+      then:
+        - text_sensor.template.publish:
+            id: version_display          
+            state: !lambda |-
+              int val = (int)x;
+              int main_code = (val >> 8) & 0xFF;
+              int slave_code = val & 0xFF;
+              char buffer[32];
+              sprintf(buffer, "(%d, 0x%04X) V%03d_T%02d", val, val, main_code, slave_code);
+              return (std::string)buffer;
+  - platform: modbus_controller
+    name: "EEPROM versie"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2123
+    value_type: S_WORD   
+  - platform: modbus_controller
+    name: "R2124"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2124
+    value_type: S_WORD                 
+  - platform: modbus_controller
+    name: "R2125"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2125
+    value_type: S_WORD                           
+  - platform: modbus_controller
+    name: "Main Control Board Nr"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2127
+    value_type: S_WORD                                         
+  - platform: modbus_controller
+    name: "Condensing temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2131
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Evaporating temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2132
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Water in temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2133
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Water out temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2134
+    value_type: S_WORD
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Condensor coil temperature"
+    device_class: "temperature"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "°C"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2135
+    value_type: S_WORD
+    register_count: 2
+    filters:
+      - offset: -3000
+      - multiply: 0.01
+  - platform: modbus_controller
+    name: "Pump power"
+    device_class: "power"
+    accuracy_decimals: 1
+    state_class: "measurement"
+    unit_of_measurement: "W"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2137
+    value_type: S_WORD
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    name: "Pump Flow"
+    device_class: "volume_flow_rate"
+    accuracy_decimals: 2
+    state_class: "measurement"
+    unit_of_measurement: "L/h"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2138
+    value_type: S_WORD
+    filters:
+      - multiply: 0.618
+
+  - platform: modbus_controller
+    name: "EEPROM"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 3310
+    value_type: S_WORD
+    skip_updates: 10
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "Defrost algorithm"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 3297
+    value_type: S_WORD
+    skip_updates: 10
+    web_server:
+      sorting_group_id: heatpump_settings
+
+  - platform: template
+    id: oq_debug_modbus_u16
+    name: "Debug Modbus value U16"
+    icon: mdi:counter
+    accuracy_decimals: 0
+    update_interval: never
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics
+
+  - platform: template
+    id: oq_debug_modbus_s16
+    name: "Debug Modbus value S16"
+    icon: mdi:counter
+    accuracy_decimals: 0
+    update_interval: never
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics      
+
+
+number:
+  - platform: modbus_controller
+    name: "Compressor level"
+    modbus_controller_id: modbus_hp1
+    address: 1999
+    min_value: 0
+    max_value: 10
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_control
+  - platform: modbus_controller
+    name: "Pump level"
+    id: modbus_pump_level
+    modbus_controller_id: modbus_hp1
+    address: 2015
+    min_value: 0
+    max_value: 1000
+    mode: box    
+    web_server:
+      sorting_group_id: heatpump_control
+
+  - platform: modbus_controller
+    name: "HeatingHz level00 (0Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3011
+    id: r3011
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level01 (30Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3012
+    id: r3012
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level02 (39Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3013
+    id: r3013
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level03 (49Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3014
+    id: r3014
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level04 (55Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3015
+    id: r3015
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level05 (61Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3016
+    id: r3016
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level06 (67Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3017
+    id: r3017
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level07 (72Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3018
+    id: r3018
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level08 (79Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3019
+    id: r3019
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level09 (85Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3020
+    id: r3020
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "HeatingHz level10 (90Hz)"
+    modbus_controller_id: modbus_hp1
+    address: 3021
+    id: r3021
+    min_value: 0
+    max_value: 120
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "DC Fan high speed power (65)"
+    modbus_controller_id: modbus_hp1
+    address: 3304
+    id: r3304    
+    min_value: 0
+    max_value: 100
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "DC Fan medium speed power (68)"
+    modbus_controller_id: modbus_hp1
+    address: 3305
+    id: r3305        
+    min_value: 0
+    max_value: 100
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "DC Fan low speed power (70)"
+    modbus_controller_id: modbus_hp1  
+    address: 3306
+    id: r3306      
+    min_value: 0
+    max_value: 100
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+  - platform: modbus_controller
+    name: "Low noise mode FAN speed value"
+    modbus_controller_id: modbus_hp1
+    address: 3308
+    min_value: 60
+    max_value: 70
+    mode: box
+    web_server:
+      sorting_group_id: heatpump_settings
+
+  - platform: template
+    id: oq_debug_modbus_register
+    name: "Debug Modbus register"
+    icon: mdi:numeric
+    min_value: 0
+    max_value: 65535
+    step: 1
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: 2137
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics      
+
+select:
+  - platform: modbus_controller
+    name: "Working mode"
+    id: working_mode
+    modbus_controller_id: modbus_hp1
+    address: 3999
+    optionsmap:
+      "Standby" : 0
+      "Cooling" : 1
+      "Heating" : 2
+      "Hot water" : 3
+      "Force defrost" : 4
+    web_server:
+      sorting_group_id: heatpump_control
+  - platform: modbus_controller
+    name: "Bottom plate heater"
+    modbus_controller_id: modbus_hp1
+    address: 3236
+    optionsmap:
+      "Based on ambient" : 1
+      "Based on defrosting" : 2
+    web_server:
+      sorting_group_id: heatpump_settings
+
+binary_sensor:
+  - platform: modbus_controller
+    name: "Fan low speed mode"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x01 #bit 0
+  - platform: modbus_controller
+    name: "Bottom heater"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x04 #bit 2
+  - platform: modbus_controller
+    name: "Crankcase heater"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x08 #bit 3
+  - platform: modbus_controller
+    name: "Fan speed defrost mode"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x10 #bit 4
+  - platform: modbus_controller
+    name: "Fan high speed mode"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x20 #bit 5
+  - platform: modbus_controller
+    name: "4way valve"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x40 #bit 6
+  - platform: modbus_controller
+    name: "Pump relay"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2108
+    bitmask: 0x800 #bit 11
+
+  - platform: modbus_controller
+    name: "Low pressure switch"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2115
+    bitmask: 0x800 # bit 11
+  - platform: modbus_controller
+    name: "High pressure switch"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2115
+    bitmask: 0x1000 # bit 12
+  - platform: modbus_controller
+    name: "Water Flow switch"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2115
+    bitmask: 0x2000 # bit 13
+
+  - platform: modbus_controller
+    name: "Defrost mode"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2118
+    bitmask: 0x01 # bit 0
+
+  - platform: modbus_controller
+    name: "Alarm - Main line current"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x01 # bit 0
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Info - Compressor oil return"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x08 # bit 3
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Alarm - High pressure switch"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x10 # bit 4
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Alarm - 1st start pre-heat"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x40 # bit 6
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Alarm - AC high low voltage"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x200 # bit 9
+    web_server:
+      sorting_group_id: heatpump_alarms
+  - platform: modbus_controller
+    name: "Alarm - Low pressure switch"
+    modbus_controller_id: modbus_hp1
+    register_type: holding
+    address: 2119
+    bitmask: 0x4096 # bit 12
+    web_server:
+      sorting_group_id: heatpump_alarms
+
+text_sensor:
+  - platform: template
+    id: oq_debug_modbus_last_target
+    name: "Debug Modbus last target"
+    icon: mdi:target
+    update_interval: never
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics
+
+  - platform: template
+    id: oq_debug_modbus_last_raw
+    name: "Debug Modbus last raw"
+    icon: mdi:code-braces
+    update_interval: never
+    entity_category: diagnostic
+    web_server:
+      sorting_group_id: oq_diagnostics    
+
+  - platform: template
+    name: "Software Version Details"
+    id: version_display

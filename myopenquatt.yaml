@@ -7,11 +7,11 @@ substitutions:
 
 esphome:
   name: heatpump-openquatt
-  friendly_name: MyOpenQuatt
+  friendly_name: MyOpenQuatt v0.1.4
   min_version: 2025.12.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.3"
+    version: "0.1.4"
 
 esp32:
   board: esp32dev
@@ -156,22 +156,25 @@ interval:
           if (sensor_bad) { id(sensor_fail_count)++; } 
           else { id(sensor_fail_count) = 0; }
 
-          // 1. TRIGGER: Below 7°C OR sensor dead for 5 mins
-          if ((!sensor_bad && temp < 7.0) || id(sensor_fail_count) >= 10) {
+          // 1. TRIGGER: Below 6°C OR sensor dead for 5 mins
+          if ((!sensor_bad && temp < 6.0) || id(sensor_fail_count) >= 10) {
             // Only trigger if in Standby
             if (is_standby) {
-              
-              auto call = id(modbus_pump_level).make_call();
-              call.set_value(770);
-              call.perform();
+
+                if (id(modbus_pump_level).state > 800) {
+
+                auto call = id(modbus_pump_level).make_call();
+                call.set_value(800);
+                call.perform();
+              }  
               
               id(modbus_pump_relay).turn_on();
               ESP_LOGW("antifreeze", "Cold/Error: Protection started.");
             }
           } 
           
-          // 2. RELEASE: Above 9°C AND in Standby
-          else if (!sensor_bad && temp > 9.0) {
+          // 2. RELEASE: Above 8°C AND in Standby
+          else if (!sensor_bad && temp > 8.0) {
             // Only stop if:
             // - We are in Standby
             // - The relay is ON
@@ -976,5 +979,5 @@ text_sensor:
       sorting_group_id: oq_diagnostics    
 
   - platform: template
-    name: "PCB program version"
+    name: "PCB Program version"
     id: version_display

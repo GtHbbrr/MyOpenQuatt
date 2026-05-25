@@ -188,7 +188,7 @@ interval:
           }
 
 # --- Antiseize Loop (Fires every 24h, executes ONLY if in Standby) ---
-  - interval: 1min #24h
+  - interval: 24h
     then:
       - if:
           condition:
@@ -209,7 +209,7 @@ interval:
             # 2. Fire up the pump relay
             - switch.turn_on: modbus_pump_relay
             # 3. Run safely for exactly 1 minute
-            - delay: 15s #1min
+            - delay: 1min
             # 4. Turn off the pump relay
             - switch.turn_off: modbus_pump_relay
             - logger.log:

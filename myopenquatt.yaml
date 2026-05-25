@@ -202,10 +202,10 @@ interval:
                 level: WARN
                 tag: "antiseize"
                 format: "Heatpump is in Standby. Executing summer antiseize routine."
-            # 1. Force pump level to 400 L/h (pump level 800)
+            # 1. Force pump level to 400 L/h (pump level 630)
             - number.set:
                 id: modbus_pump_level
-                value: 800
+                value: 630
             # 2. Fire up the pump relay
             - switch.turn_on: modbus_pump_relay
             # 3. Run safely for exactly 1 minute

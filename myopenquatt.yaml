@@ -187,6 +187,41 @@ interval:
             }
           }
 
+# --- Antiseize Loop (Fires every 24h, executes ONLY if in Standby) ---
+  - interval: 1min #24h
+    then:
+      - if:
+          condition:
+            lambda: |-
+              if (id(working_mode).active_index().has_value()) {
+                return id(working_mode).active_index().value() == 0;
+              }
+              return false;
+          then:
+            - logger.log:
+                level: WARN
+                tag: "antiseize"
+                format: "Heatpump is in Standby. Executing summer antiseize routine."
+            # 1. Force pump level to 400 L/h (pump level 800)
+            - number.set:
+                id: modbus_pump_level
+                value: 800
+            # 2. Fire up the pump relay
+            - switch.turn_on: modbus_pump_relay
+            # 3. Run safely for exactly 1 minute
+            - delay: 15s #1min
+            # 4. Turn off the pump relay
+            - switch.turn_off: modbus_pump_relay
+            - logger.log:
+                level: WARN
+                tag: "antiseize"
+                format: "Antiseize routine finished. Normal monitoring resumed."
+          else:
+            - logger.log:
+                level: DEBUG
+                tag: "antiseize"
+                format: "Heatpump is active (not in Standby). Skipping antiseize loop."        
+
 button:
   - platform: restart
     name: Restart OpenQuatt

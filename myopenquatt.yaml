@@ -11,7 +11,7 @@ esphome:
   min_version: 2025.12.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.4"
+    version: "0.1.5"
 
 esp32:
   board: esp32dev

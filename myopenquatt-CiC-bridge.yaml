@@ -444,18 +444,18 @@ globals:
     initial_value: '0'
 
 # ====================== Modbus Slave Registers ======================
-modbus_controller:
+modbus_server:
   - id: quatt_cic
     modbus_id: quatt_modbus
     address: 1
     setup_priority: -100
     update_interval: never
-    server_courtesy_response:
+    courtesy_response:
       enabled: true
       register_last_address: 5000
       register_value: 0    
 
-    server_registers:
+    registers:
       # CiC -> HP control registers
       - address: 1999  # R1999 Compressor Level set by CiC
         value_type: U_WORD

@@ -29,6 +29,10 @@ web_server:
   port: 80
   local: true
 
+button:
+  - platform: restart
+    name: Restart Quatt-CiC-Bridge
+
 ota:
   - platform: esphome
     password: !secret QMB_ota
@@ -488,7 +492,7 @@ modbus_controller:
       - address: 3999  # R3999 Working mode set by CiC
         value_type: U_WORD
         read_lambda: |-
-          if (id(hp1_set_working_mode_ha).state == "Cooling") return 1;
+          if (id(hp1_set_working_mode_ha).state == "Cooling") return 2;
           if (id(hp1_set_working_mode_ha).state == "Heating") return 2;
           return 0;
         write_lambda: |-
@@ -500,7 +504,7 @@ modbus_controller:
       - address: 2099  # R2099 Working Mode Actual
         value_type: U_WORD
         read_lambda: |-
-          if (id(hp1_set_working_mode_ha).state == "Cooling") return 1;
+          if (id(hp1_set_working_mode_ha).state == "Cooling") return 2;
           if (id(hp1_set_working_mode_ha).state == "Heating") return 2;
           return 0;
       - address: 2100  # R2100 Compressor AC Voltage
@@ -661,8 +665,10 @@ modbus_controller:
       - address: 2134  # R2134 Water Out met calibratiecorrectie van 0.2 graden
         value_type: U_WORD
         read_lambda: |-
-          const float v = id(hp1_r2134).state;
-          return isnan(v) ? 0 : static_cast<uint16_t>(lroundf((v * 100.0f) + 3020.0f));      
+          const float Tout = id(hp1_r2134).state;
+          const float Tin = id(hp1_r2133).state;
+          const float v = Tin + abs( ( Tout + 0.2 ) - Tin );          
+          return isnan(v) ? 0 : static_cast<uint16_t>(lroundf((v * 100.0f) + 3000.0f));      
       - address: 2135  # R2135 Condenser Coil Temperature
         value_type: U_WORD
         read_lambda: |-

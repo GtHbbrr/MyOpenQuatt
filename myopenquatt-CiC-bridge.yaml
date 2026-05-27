@@ -448,8 +448,8 @@ modbus_server:
   - id: quatt_cic
     modbus_id: quatt_modbus
     address: 1
-    setup_priority: -100
-    update_interval: never
+    #setup_priority: -100
+    #update_interval: never
     courtesy_response:
       enabled: true
       register_last_address: 5000

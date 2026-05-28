@@ -7,11 +7,11 @@ substitutions:
 
 esphome:
   name: heatpump-openquatt
-  friendly_name: MyOpenQuatt v0.1.72
+  friendly_name: MyOpenQuatt v0.1.73
   min_version: 2026.5.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.72"
+    version: "0.1.73"
 
 esp32:
   board: esp32dev
@@ -116,15 +116,10 @@ uart:
 
 modbus:
   flow_control_pin: GPIO21
-  #send_wait_time: 35ms # Verlaagd naar 20ms voor snellere opeenvolgende pakketten
 
 modbus_controller:
   - id: modbus_hp1
     address: 0x01 
-    #update_interval: 7s    
-    #command_throttle: 120ms # Drastisch verlaagd van 300ms naar 100ms voor snelle register-afhandeling
-    #max_cmd_retries: 2     # Verhoogd naar 2 voor extra stabiliteit bij snelle polling
-    #offline_skip_updates: 5
     setup_priority: -10
 
 output:

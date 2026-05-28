@@ -7,11 +7,11 @@ substitutions:
 
 esphome:
   name: heatpump-openquatt
-  friendly_name: MyOpenQuatt v0.1.7
+  friendly_name: MyOpenQuatt v0.1.71
   min_version: 2026.5.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.7"
+    version: "0.1.71"
 
 esp32:
   board: esp32dev
@@ -699,6 +699,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -709,6 +710,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -719,6 +721,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -729,6 +732,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -739,6 +743,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -749,6 +754,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -759,6 +765,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -769,6 +776,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -779,6 +787,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -789,6 +798,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -799,6 +809,7 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -809,6 +820,7 @@ number:
     min_value: 0
     max_value: 100
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -819,6 +831,7 @@ number:
     min_value: 0
     max_value: 100
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -829,6 +842,7 @@ number:
     min_value: 0
     max_value: 100
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -838,6 +852,7 @@ number:
     min_value: 60
     max_value: 70
     mode: box
+    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
 

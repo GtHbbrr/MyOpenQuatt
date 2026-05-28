@@ -879,7 +879,7 @@ select:
       - "INFO"
       - "DEBUG"
     web_server:
-      sorting_group_id: oq_diagnostics
+      sorting_group_id: heatpump_control
     on_value:
       - lambda: |-
           if (x == "ERROR") {

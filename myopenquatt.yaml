@@ -7,11 +7,11 @@ substitutions:
 
 esphome:
   name: heatpump-openquatt
-  friendly_name: MyOpenQuatt v0.1.5
-  min_version: 2025.12.0
+  friendly_name: MyOpenQuatt v0.1.6
+  min_version: 2026.5.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.5"
+    version: "0.1.6"
 
 esp32:
   board: esp32dev
@@ -23,7 +23,12 @@ esp32:
     sdkconfig_options:
       COMPILER_OPTIMIZATION_SIZE: y
       CONFIG_BT_ENABLED: n         
-
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_240: y
+      # 🚀 Activeer en optimaliseer PSRAM voor WROVER-E onder ESP-IDF:
+      CONFIG_SPIRAM_SUPPORT: y
+      CONFIG_SPIRAM_BOOT_INIT: y
+      CONFIG_SPIRAM_USE_MALLOC: y
+      
 switch:
   - platform: gpio
     pin: GPIO22

@@ -62,16 +62,8 @@ switch:
 
 logger:
   id: logger_component       # 🚀 Explicitly links the ID for our drop-down lambda script under Select
-  level: WARN
+  level: DEBUG
   baud_rate: 0  
-#  logs:
-#    # This specifically silences the state changes [S] for these types
-#    sensor: NONE
-#    number: NONE
-#    select: NONE
-#    switch: NONE
-#    binary_sensor: NONE
-#    modbus_controller: WARN  # Keeps the important Modbus errors visible
 
 api:
 

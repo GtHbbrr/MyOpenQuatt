@@ -699,6 +699,8 @@ number:
     min_value: 0
     max_value: 120
     mode: box
+    filters:
+      - throttle: 300s
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller

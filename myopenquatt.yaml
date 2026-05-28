@@ -110,21 +110,21 @@ uart:
   data_bits: 8
   stop_bits: 1
   baud_rate: 19200
-  rx_full_threshold: 1
-  rx_timeout: 2
-  rx_buffer_size: 512
+  #rx_full_threshold: 1
+  #rx_timeout: 2
+  #rx_buffer_size: 512
 
 modbus:
   flow_control_pin: GPIO21
-  send_wait_time: 35ms # Verlaagd naar 20ms voor snellere opeenvolgende pakketten
+  #send_wait_time: 35ms # Verlaagd naar 20ms voor snellere opeenvolgende pakketten
 
 modbus_controller:
   - id: modbus_hp1
     address: 0x01 
-    update_interval: 7s    
-    command_throttle: 120ms # Drastisch verlaagd van 300ms naar 100ms voor snelle register-afhandeling
-    max_cmd_retries: 2     # Verhoogd naar 2 voor extra stabiliteit bij snelle polling
-    offline_skip_updates: 5
+    #update_interval: 7s    
+    #command_throttle: 120ms # Drastisch verlaagd van 300ms naar 100ms voor snelle register-afhandeling
+    #max_cmd_retries: 2     # Verhoogd naar 2 voor extra stabiliteit bij snelle polling
+    #offline_skip_updates: 5
     setup_priority: -10
 
 output:

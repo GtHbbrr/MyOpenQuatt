@@ -13,13 +13,15 @@ esphome:
 
 esp32:
   board: esp32-s3-devkitc-1   # This is the closest officially supported board
+  board_flash_mode: qio       # 🚀 S3 Super Mini ondersteunt de snellere Quad-IO flash-modus  
+  flash_size: 4MB             # Super Mini heeft standaard 4MB aan boord
   framework:
     type: esp-idf             # This usually fixes the Cache error on S3
     version: recommended
     sdkconfig_options:
       COMPILER_OPTIMIZATION_SIZE: y
       CONFIG_BT_ENABLED: n
-  flash_size: 4MB
+      CONFIG_FREERTOS_HZ: 1000 # Essentieel voor de S3 om microseconde-nauwkeurige bridges te bouwen      
 
 wifi:
   ssid: !secret wifi_ssid

@@ -127,14 +127,6 @@ modbus_controller:
     offline_skip_updates: 5
     setup_priority: -10
 
-  - id: modbus_hp1_slow
-    address: 0x01 
-    update_interval: 5min
-    command_throttle: 40ms 
-    max_cmd_retries: 2     
-    offline_skip_updates: 5
-    setup_priority: -11    
-
 output:
   - platform: gpio
     id: led_yellow_output
@@ -701,7 +693,7 @@ number:
 
   - platform: modbus_controller
     name: "HeatingHz level00 (0Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3011
     id: r3011
     min_value: 0
@@ -711,7 +703,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level01 (30Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3012
     id: r3012
     min_value: 0
@@ -721,7 +713,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level02 (39Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3013
     id: r3013
     min_value: 0
@@ -731,7 +723,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level03 (49Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3014
     id: r3014
     min_value: 0
@@ -741,7 +733,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level04 (55Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3015
     id: r3015
     min_value: 0
@@ -751,7 +743,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level05 (61Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3016
     id: r3016
     min_value: 0
@@ -761,7 +753,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level06 (67Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3017
     id: r3017
     min_value: 0
@@ -781,7 +773,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level08 (79Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3019
     id: r3019
     min_value: 0
@@ -791,7 +783,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level09 (85Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3020
     id: r3020
     min_value: 0
@@ -801,7 +793,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level10 (90Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3021
     id: r3021
     min_value: 0
@@ -811,7 +803,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "DC Fan high speed power (65)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3304
     id: r3304    
     min_value: 0
@@ -821,7 +813,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "DC Fan medium speed power (68)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3305
     id: r3305        
     min_value: 0
@@ -831,7 +823,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "DC Fan low speed power (70)"
-    modbus_controller_id: modbus_hp1_slow  
+    modbus_controller_id: modbus_hp1
     address: 3306
     id: r3306      
     min_value: 0
@@ -841,7 +833,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "Low noise mode FAN speed value"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3308
     min_value: 60
     max_value: 70

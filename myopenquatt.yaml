@@ -761,13 +761,12 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level06 (67Hz)"
-    modbus_controller_id: modbus_hp1
+    modbus_controller_id: modbus_hp1_slow
     address: 3017
     id: r3017
     min_value: 0
     max_value: 120
     mode: box
-    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
@@ -802,13 +801,12 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level10 (90Hz)"
-    modbus_controller_id: modbus_hp1
+    modbus_controller_id: modbus_hp1_slow
     address: 3021
     id: r3021
     min_value: 0
     max_value: 120
     mode: box
-    update_interval: 5min
     web_server:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller

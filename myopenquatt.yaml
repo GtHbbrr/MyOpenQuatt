@@ -7,11 +7,11 @@ substitutions:
 
 esphome:
   name: heatpump-openquatt
-  friendly_name: MyOpenQuatt v0.1.71
+  friendly_name: MyOpenQuatt v0.1.72
   min_version: 2026.5.0
   project:
     name: "teslanerd.heatpump-openquatt"
-    version: "0.1.71"
+    version: "0.1.72"
 
 esp32:
   board: esp32dev
@@ -111,12 +111,12 @@ uart:
   stop_bits: 1
   baud_rate: 19200
   rx_full_threshold: 1
-  rx_timeout: 1
+  rx_timeout: 4
   rx_buffer_size: 512
 
 modbus:
   flow_control_pin: GPIO21
-  send_wait_time: 20ms # Verlaagd naar 20ms voor snellere opeenvolgende pakketten
+  send_wait_time: 50ms # Verlaagd naar 20ms voor snellere opeenvolgende pakketten
 
 modbus_controller:
   - id: modbus_hp1

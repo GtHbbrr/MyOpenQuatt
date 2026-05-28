@@ -61,16 +61,16 @@ switch:
       sorting_group_id: heatpump_control         
 
 logger:
-  level: WARN
-  baud_rate: 0
-  logs:
-    # This specifically silences the state changes [S] for these types
-    sensor: NONE
-    number: NONE
-    select: NONE
-    switch: NONE
-    binary_sensor: NONE
-    modbus_controller: WARN  # Keeps the important Modbus errors visible
+  level: ERROR  #WARN
+#  baud_rate: 0
+#  logs:
+#    # This specifically silences the state changes [S] for these types
+#    sensor: NONE
+#    number: NONE
+#    select: NONE
+#    switch: NONE
+#    binary_sensor: NONE
+#    modbus_controller: WARN  # Keeps the important Modbus errors visible
 
 api:
 

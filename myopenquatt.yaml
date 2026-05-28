@@ -121,7 +121,7 @@ modbus:
 modbus_controller:
   - id: modbus_hp1
     address: 0x01 
-    update_interval: 10s    # was 5s, nu verhoogd naar 10s
+    update_interval: 5s    
     command_throttle: 100ms # Drastisch verlaagd van 300ms naar 100ms voor snelle register-afhandeling
     max_cmd_retries: 2     # Verhoogd naar 2 voor extra stabiliteit bij snelle polling
     offline_skip_updates: 5

@@ -887,7 +887,7 @@ select:
       - "DEBUG"
     web_server:
       sorting_group_id: heatpump_control    #oq_diagnostics
-    on_value_changed:
+    on_value:
       - lambda: |-
           if (x == "ERROR") {
             id(logger_component).set_level(ESPHOME_LOG_LEVEL_ERROR);

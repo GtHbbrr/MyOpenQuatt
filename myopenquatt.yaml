@@ -61,8 +61,8 @@ switch:
       sorting_group_id: heatpump_control         
 
 logger:
-  level: ERROR  #WARN
-#  baud_rate: 0
+  level: DEBUG
+  baud_rate: 0
 #  logs:
 #    # This specifically silences the state changes [S] for these types
 #    sensor: NONE
@@ -874,6 +874,34 @@ select:
       "Based on defrosting" : 2
     web_server:
       sorting_group_id: heatpump_settings
+  - platform: template
+    name: "Logger Level"
+    id: logger_level_select
+    icon: "mdi:text-log"
+    optimistic: true
+    initial_option: "WARN"
+    options:
+      - "ERROR"
+      - "WARN"
+      - "INFO"
+      - "DEBUG"
+    web_server:
+      sorting_group_id: heatpump_control    #oq_diagnostics
+    on_value_changed:
+      - lambda: |-
+          if (x == "ERROR") {
+            id(logger_component).set_level(ESPHOME_LOG_LEVEL_ERROR);
+          } else if (x == "WARN") {
+            id(logger_component).set_level(ESPHOME_LOG_LEVEL_WARN);
+            ESP_LOGW("logger", "Log level runtime switched to WARNING.");
+          } else if (x == "INFO") {
+            id(logger_component).set_level(ESPHOME_LOG_LEVEL_INFO);
+            ESP_LOGI("logger", "Log level runtime switched to INFO.");
+          } else if (x == "DEBUG") {
+            id(logger_component).set_level(ESPHOME_LOG_LEVEL_DEBUG);
+            ESP_LOGD("logger", "Log level runtime switched to DEBUG.");
+          }
+      
 
 binary_sensor:
   - platform: modbus_controller

@@ -763,7 +763,7 @@ number:
       sorting_group_id: heatpump_settings
   - platform: modbus_controller
     name: "HeatingHz level07 (72Hz)"
-    modbus_controller_id: modbus_hp1_slow
+    modbus_controller_id: modbus_hp1
     address: 3018
     id: r3018
     min_value: 0

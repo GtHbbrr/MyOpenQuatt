@@ -61,8 +61,9 @@ switch:
       sorting_group_id: heatpump_control         
 
 logger:
-  level: DEBUG
-  baud_rate: 0
+  id: logger_component       # 🚀 Explicitly links the ID for our drop-down lambda script under Select
+  level: WARN
+  baud_rate: 0  
 #  logs:
 #    # This specifically silences the state changes [S] for these types
 #    sensor: NONE
@@ -886,7 +887,7 @@ select:
       - "INFO"
       - "DEBUG"
     web_server:
-      sorting_group_id: heatpump_control    #oq_diagnostics
+      sorting_group_id: heatpump_control  #oq_diagnostics
     on_value:
       - lambda: |-
           if (x == "ERROR") {
@@ -900,8 +901,7 @@ select:
           } else if (x == "DEBUG") {
             id(logger_component).set_level(ESPHOME_LOG_LEVEL_DEBUG);
             ESP_LOGD("logger", "Log level runtime switched to DEBUG.");
-          }
-      
+          }     
 
 binary_sensor:
   - platform: modbus_controller

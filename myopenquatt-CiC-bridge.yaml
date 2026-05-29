@@ -505,7 +505,7 @@ modbus_server:
       - address: 2099  # R2099 Working Mode Actual
         value_type: U_WORD
         read_lambda: |-
-          if (id(hp1_set_working_mode_ha).state == "Cooling") return 1;
+          if (id(hp1_set_working_mode_ha).state == "Cooling") return 2;
           if (id(hp1_set_working_mode_ha).state == "Heating") return 2;
           return 0;
       - address: 2100  # R2100 Compressor AC Voltage

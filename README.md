@@ -6,4 +6,5 @@ Please go to https://github.com/jeroen85/OpenQuatt for the full version of OpenQ
 and find user stories for OpenQuatt on Tweakers & Discord:
 
 https://gathering.tweakers.net/forum/list_messages/2325776
+
 https://discord.com/channels/1176602554885492786/1464174190788874427

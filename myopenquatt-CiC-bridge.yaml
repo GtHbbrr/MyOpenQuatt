@@ -30,24 +30,43 @@ web_server:
   port: 80
   local: true
 
-# Add a template switch that pauzes all modbus communications by hijacking the Flow Control Pin
-switch:
+# ====================== BRIDGE CONTROLS ======================
+select:
   - platform: template
-    name: "Pause Modbus Bridge"
-    id: pause_switch
-    icon: "mdi:pause-circle"
+    name: "Modbus Operation Mode"
+    id: modbus_mode_select
+    icon: "mdi:transit-connection-variant"
     optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
-    on_turn_on:
-      - lambda: |-
-          // Force the Flow Control Pin low, making it impossible to transmit
-          pinMode(7, OUTPUT);
-          digitalWrite(7, LOW);
-          ESP_LOGE("custom", "UART Modbus transmission physically PAUSED.");
-    on_turn_off:
-      - lambda: |-
-          // Hand control back over to the UART subsystem
-          ESP_LOGE("custom", "UART Modbus transmission RESUMED.");
+    # Define the two states available in the dropdown menu
+    options:
+      - "ACTIVE"
+      - "PAUSED"
+    # Ensure it defaults to ACTIVE when the ESP32 powers on
+    initial_option: "ACTIVE"
+    restore_value: no
+    
+    # Executed whenever someone changes the selection on the web interface
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x == "PAUSED";'
+            then:
+              - lambda: |-
+                  // Physically disable UART transmissions by pinning flow control LOW
+                  pinMode(7, OUTPUT);
+                  digitalWrite(7, LOW);
+                  ESP_LOGE("custom", "Modbus Bridge Mode set to: PAUSED. Line silenced.");
+            else:
+              - lambda: |-
+                  // Return pin control back to the ESP32 UART subsystem
+                  pinMode(7, INPUT);
+                  ESP_LOGI("custom", "Modbus Bridge Mode set to: ACTIVE. Resuming traffic.");
+
+button:
+  - platform: restart
+    name: Restart Quatt-CiC-Bridge
+
   
 
 button:

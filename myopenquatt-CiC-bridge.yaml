@@ -30,7 +30,14 @@ web_server:
   port: 80
   local: true
 
-# ====================== BRIDGE CONTROLS ======================
+# 1. Add a global boolean variable to track state securely
+globals:
+  - id: modbus_is_paused
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+# 2. Clean, error-free select component
 select:
   - platform: template
     name: "Modbus Operation Mode"
@@ -48,31 +55,15 @@ select:
             condition:
               lambda: 'return x == "PAUSED";'
             then:
-              - lambda: |-
-                  // ESP-IDF: Break the software routing matrix link to the physical UART pins
-                  // This instantly blinds the Modbus engine from seeing incoming traffic
-                  esp_rom_gpio_connect_in_signal(GPIO_FUNC_IN_HIGH, UART_NUM_1, UART_RXD_IDX, false);
-                  
-                  // Turn physical pins into safe inputs so they stop listening/transmitting
-                  gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT);
-                  gpio_set_direction(GPIO_NUM_6, GPIO_MODE_INPUT);
-                  gpio_set_direction(GPIO_NUM_7, GPIO_MODE_INPUT);
-                  
-                  ESP_LOGE("custom", "Modbus Bridge Mode set to: PAUSED. UART software matrix disconnected.");
+              - globals.set:
+                  id: modbus_is_paused
+                  value: 'true'
+              - logger.log: "Modbus Bridge Mode set to: PAUSED. Discarding incoming bytes."
             else:
-              - lambda: |-
-                  // ESP-IDF: Reconnect the physical pins back to the internal UART subsystem
-                  // This fully restores original Modbus communications instantly
-                  esp_rom_gpio_connect_out_signal(GPIO_NUM_6, UART_TXD_MUX_IDX, false, false);
-                  esp_rom_gpio_connect_in_signal(GPIO_NUM_5, UART_NUM_1, UART_RXD_IDX, false);
-                  esp_rom_gpio_connect_out_signal(GPIO_NUM_7, UART_RTS_MUX_IDX, false, false);
-                  
-                  // Restore appropriate operational pin directions
-                  gpio_set_direction(GPIO_NUM_6, GPIO_MODE_OUTPUT);
-                  gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT);
-                  gpio_set_direction(GPIO_NUM_7, GPIO_MODE_OUTPUT);
-                  
-                  ESP_LOGI("custom", "Modbus Bridge Mode set to: ACTIVE. UART software matrix restored.");
+              - globals.set:
+                  id: modbus_is_paused
+                  value: 'false'
+              - logger.log: "Modbus Bridge Mode set to: ACTIVE. Resuming traffic."
 
 button:
   - platform: restart
@@ -132,9 +123,18 @@ uart:
     rx_timeout: 50
     rx_buffer_size: 512
     flow_control_pin: GPIO7
- 
-    #debug:
-    #  direction: BOTH
+        # This debug block intercepts all raw incoming bytes safely
+    debug:
+      direction: RX
+      dummy_receiver: false
+      after:
+        delimiter: []
+      then:
+        - lambda: |-
+            // If the drop-down select is set to PAUSED, empty the RX buffer immediately
+            if (id(modbus_is_paused)) {
+              bytes.clear(); 
+            }
 
 # ====================== Modbus Server ======================
 modbus:

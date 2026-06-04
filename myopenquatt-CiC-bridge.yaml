@@ -67,12 +67,6 @@ button:
   - platform: restart
     name: Restart Quatt-CiC-Bridge
 
-  
-
-button:
-  - platform: restart
-    name: Restart Quatt-CiC-Bridge
-
 ota:
   - platform: esphome
     password: !secret QMB_ota

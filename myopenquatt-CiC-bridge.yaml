@@ -122,12 +122,14 @@ uart:
       dummy_receiver: false
       after:
         delimiter: []
-      then:
-        - lambda: |-
-            // If the drop-down select is set to PAUSED, empty the RX buffer immediately
-            if (id(modbus_is_paused)) {
-              bytes.clear(); 
-            }
+        # Move the 'then:' statement here so it is inside the 'after' block
+        then:
+          - lambda: |-
+              // If the drop-down select is set to PAUSED, empty the RX buffer immediately
+              if (id(modbus_is_paused)) {
+                bytes.clear(); 
+              }
+
 
 # ====================== Modbus Server ======================
 modbus:

@@ -30,34 +30,6 @@ web_server:
   port: 80
   local: true
 
-# Clean, error-free select component
-select:
-  - platform: template
-    name: "Modbus Operation Mode"
-    id: modbus_mode_select
-    icon: "mdi:transit-connection-variant"
-    optimistic: true
-    options:
-      - "ACTIVE"
-      - "PAUSED"
-    initial_option: "ACTIVE"
-    restore_value: no
-    on_value:
-      then:
-        - if:
-            condition:
-              lambda: 'return x == "PAUSED";'
-            then:
-              - globals.set:
-                  id: modbus_is_paused
-                  value: 'true'
-              - logger.log: "Modbus Bridge Mode set to: PAUSED. Discarding incoming bytes."
-            else:
-              - globals.set:
-                  id: modbus_is_paused
-                  value: 'false'
-              - logger.log: "Modbus Bridge Mode set to: ACTIVE. Resuming traffic."
-
 button:
   - platform: restart
     name: Restart Quatt-CiC-Bridge
@@ -101,7 +73,7 @@ api:
 
 logger:
   id: logger_component       # 🚀 Explicitly links the ID for our drop-down lambda script under Select
-  level: DEBUG
+  level: ERROR
   baud_rate: 0  
 
 uart:
@@ -116,18 +88,6 @@ uart:
     rx_timeout: 50
     rx_buffer_size: 512
     flow_control_pin: GPIO7
-    # Use the officially supported schema structure
-    debug:
-      direction: RX
-      dummy_receiver: false
-      after:
-        bytes: 1
-        then:
-          - lambda: |-
-              // Clear incoming bytes matching the dropdown pause state
-              if (id(modbus_is_paused)) {
-                bytes.clear(); 
-              }
 
 # ====================== Modbus Server ======================
 modbus:

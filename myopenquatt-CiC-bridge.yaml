@@ -116,14 +116,15 @@ uart:
     rx_timeout: 50
     rx_buffer_size: 512
     flow_control_pin: GPIO7
-    # Clean, validated debug automation schema
+    # Use the officially supported schema structure
     debug:
       direction: RX
       dummy_receiver: false
-      on_receive:
+      after:
+        bytes: 1
         then:
           - lambda: |-
-              // When drop-down select is set to PAUSED, empty the incoming serial stream instantly
+              // Clear incoming bytes matching the dropdown pause state
               if (id(modbus_is_paused)) {
                 bytes.clear(); 
               }

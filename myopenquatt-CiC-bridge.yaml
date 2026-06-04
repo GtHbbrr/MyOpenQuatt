@@ -30,6 +30,26 @@ web_server:
   port: 80
   local: true
 
+# Add a template switch that pauzes all modbus communications by hijacking the Flow Control Pin
+switch:
+  - platform: template
+    name: "Pause Modbus Bridge"
+    id: pause_switch
+    icon: "mdi:pause-circle"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          // Force the Flow Control Pin low, making it impossible to transmit
+          pinMode(7, OUTPUT);
+          digitalWrite(7, LOW);
+          ESP_LOGE("custom", "UART Modbus transmission physically PAUSED.");
+    on_turn_off:
+      - lambda: |-
+          // Hand control back over to the UART subsystem
+          ESP_LOGE("custom", "UART Modbus transmission RESUMED.");
+  
+
 button:
   - platform: restart
     name: Restart Quatt-CiC-Bridge

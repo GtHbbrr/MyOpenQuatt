@@ -1,0 +1,6 @@
+packages:
+  remote_package:
+    url: https://github.com/GtHbbrr/MyOpenQuatt
+    files: 
+      - myopenquatt.yaml 
+    refresh: 0s      

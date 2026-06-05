@@ -69,6 +69,7 @@ api:
 
 ota:
   - platform: esphome
+  - platform: web_server
 
 wifi:
   ssid: !secret wifi_ssid
